@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Lab Robot Arm Sim v1.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Inter', sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        #ui-panel { position: absolute; top: 0; right: 0; width: 400px; height: 100vh; z-index: 10; background-color: rgba(15, 23, 42, 0.95); border-left: 1px solid #334155; overflow-y: auto; box-shadow: -4px 0 25px rgba(0,0,0,0.7); backdrop-filter: blur(12px); display: flex; flex-direction: column; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .slider-container { margin-bottom: 0.75rem; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #3b82f6; }
+        .input-num { background: #1e293b; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 4px; width: 70px; outline: none; transition: border 0.2s; }
+        .input-num:focus { border-color: #3b82f6; }
+        
+        .btn { transition: all 0.2s ease-in-out; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: scale(1); }
+
+        .tab-btn { border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { border-bottom-color: #a855f7; color: #a855f7; font-weight: bold; background: rgba(168, 85, 247, 0.1); }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <!-- Confetti Overlay -->
+    <div id="confetti-container" class="fixed inset-0 pointer-events-none z-50 overflow-hidden hidden"></div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <div class="p-5 border-b border-slate-700 flex items-center gap-3">
+            <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAyAKADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9U6qarq1noenXF/qF1DZWNshkmuJ3CRxqOpYngCrROBX5wftB/EXxJ+1/8WtQ8AeFJrqD4a+G5tuqXtmpIupVJBY46jKlUHTgsaHKlSpzr4ifJTgryb6L/N7JdWZzny7K77HefGf/AIKheGfCdzdWXgXR28TPA2w6reOYLPP+yMbm/wDHa8Q0L/gpX8YvG+sSWmhaf4cmuFQy/ZEtmzsB5OWfnGR3ryf9tPTdG+Hvh/wb4J0Oyj0+Bmlv5kA/eSsoEaM5PLE7nruf2e/hRZ/CjwLLrOtLHBq19B9ovZpsAW0AG4R57YHLe/0FcE+JsswmWU8xdBy9pK0It+9JJ2b7L8eiOjK8rx2d1Z0qE1DlTbk1dLtfb+rnt3hD/gpb4k8M3sdt8TvAJtrVyFOoaRuXb77GJVvoGFfa3wy+K3hb4weGotd8J6vDqtg+AxjOJIm/uSIeVb2P4Zr8uPAvxT8OfF3+2LS0jHl28rR/ZbrBaaEnCyAeh9O1Y3gW7+JH7KHxHu/GfhzSNTuPBkBje8kZGFrcWzvtMMpP8QJ4YDj5TX6Bj8twf1eniaEuTntZSdtX9m3fpp1PzvJ+IcRXxtXLMdTtVp9Y3akl1Xl180fsdVK+1nT9LMYvb62szKcRieZU3n2yeazPAHjjS/iT4M0jxPos3n6XqlutxA56gHqpHYg5BHqDXzV8bdRPwq+M2ta94+8O/wDCR/CzxbZ2umPqyp5j6C6goVdf4YnZ924dz6jB+UhSc5OHXt+h95KdldH1WdUs1uBbm6gE5OPKMi7s/TOaU6jaLci2NzCLg/8ALEyDf69OtfOXiK1tD+3F8O2hVHibwbfOrjkPiVQrZ7nB4PvXX6tZQt+1x4cm8lS48IXrFscgi7gAP5Ej8ap0rW13Vw5j2RJUkGUdWGSMqc8g4P61FBqNrdSvHDcwzSJ95I5AxHbkCvjjw74+8WfAXxJ4m8a3j3PiD4Tav4m1KLVYY1LzaBMt06C4QDkwsAN47HmvaPg7PpN38SfivrmmTW9xp17cabcw3duQY5IzYRtuBHY5JpzoOCbvdf8ADaCVS+h7LHIkq7kZXXJGVORkcGhZEdmCsGKHDAHODjOD+BH518e/sx/Gi98DW3i3RfHdywhntJPG+iTt1msLh2eSFM9WSRsY/wBuuw/ZJ8R+JLrxj8X9I8XOBr0etW+qPbg5EEdzbIyRj2QIE/4DVTw0oczb0X4gqidj6REqGQoHUuBkrnnHrj8DVa61iwsnKXF7bwOMErLKqkfma+PdO+NQtf2pNG8XnXkn8M+Kbq58ILpwc7bVYWH2S4Pb97MJ+fR1rrP2gm0Wy/af+E1xrenNqGnNperi4gjtGuS4WNCCY1BLAc9jimsM1JRb3Tf3dBe0Vmz6ckvIIrfz3mjSDGfMZwFx656VEdWsRbm4N5biAHaZfNXaD6ZzjNfPH7O+iww/s4eJ7q2vlv8Aw3q02qX+i2jSeZ9isX3eVAc9CMElf4Scdq8r/Y71PSfij4O8EeBvFEbWVvoGlw6rYaLdr8uuOXcm83dJEiPAj6hss2eMJ4fSUk9Iuw/aapdz7Yl13TYADJqFrGCARunUcHoetWoLiK6hWWGRJYmGVdGDKfoRXyt8crG2j/a5+FEI8OjxBA+g6oG0yMRgSbQm04chTt9/wr6I+HVra2fgvTIrLRZPDlttZl0qXG62y7EocZHUnpxzxxWU6ajGMr7/APB/yKjK7aOR/ai8eTfDX4AeN9ftn8u8g094rdh1WWXEaEe4Lg/hXxT+wL8W/C+k+CrrwwthPDq5uZrq91AEMJmyoUEdRhduOvc96+qP29NIn1j9lXxslupZreOC6YDrsSdGb9AT+Fflp+xt4hfRvj0+mSS7YdTtrhAh7uq71I/BWryuIMuo5jw3ioVL3XvKztrFXXqt9GTHE/Vq/Na+jt5M/T3W5vhv421SOw1qPQtW1CCNbmODUYUaSNCxCuN44G5T+Iqv4j8IfC/WLC403W18PSWlwo822ubuJA65zyCw44/SvIfEWmwpqiXyxKLiaEQNKByVViVH0y7H8a/OP4sahqnxJ+K/iG9sLS8vYzdNb24hjZh5UfyL7fw5/GvwHhnhWfEGJdKliJU400nfez8tVbq/kfbVZzw2VUcXSvKdZtcsb9LrW2r/AOCfqnZ6l+z58G1a5srzwP4ekRcGS0eBpSPT5MsfpVf4pfHjwZqHw41u1srCbxjbX2nyKtnagRJcI6cBXYcZzkHHpX5geGP2e9d1h0l1Qx6RbnkhyHmI9gOB+Jr6r8BaZFoXhew0qKSWeKyTyVeY5cr2z+dfueS+FuXVsUqmY4urVlHVe9ZXX3v8T4Di6fEHD+URziOFVOlzxjLmXvWlfZdNrXa6o9+/4JbeNLq9+G/izwheM/maDqSywxyNkxxzKcp+Dxsf+BV7/wCPvhDq/jXTfFGhaj4riTwbr0u+6tZLQG4giIUPFHMWwqkrnJUkbjg9MfMP/BL/AE97jX/i1rMWTYy3lvbxt2Y7pW4+gK/mK+i/2n9N8Trp3hnxDoGjr4rsdAvmvNW8LlsHUbcxlMoOjPGTvVTwT7gV9jjY8uOnGLt/na/5mlOUJ0uaPw9O9ul/kbnjr4KReJ9f8IeKPD2sN4f8ReGInt7C6SMTwS20ihXglQkbkIUcgggjINa3hrwFcaT4svPFviLWYdT8Q3FkumwukIt7e2tw+8pGm4nLPgsSSTtUcAUvwW13wzr3wp0fVvBsLp4euYpLi1tWBV4iZGLxFT90q+5cdseleO/st6Rpfx4+H1/468bQQ+JNf1PVb2GSO9HmR6fHFMyJbRoeECqAeOSWya4bTcW5PSOnnrc10vp1PYvh38ND4N8P63pWpX8WuWmp6hd37rLbhFAuHZ3jIyQy5YgZ7da5jwB+ztpPwr8M+OdD8KanJp9h4jleeBJAJBpweLyysfPKDkqD06dBXovg3wfp3gjw7Foemq/9nwyTNFHIxbYskjPsBP8ACN20D0Ar5o/Zr8RazpV78W7Wx8IXviS1HjXUbcTx3cSJHEpULCFkYHCgk4HHzU488ozlGXb56idk1oeqaj+zb4d8RD4aSapILm98DBFt5YVCC5jWMKI5F5+Ussb46ZX3pNY+B97D8Q/Hfi/SfFX9jTeK9Jt9MuEa2Vvs7RKyJMjZHz4Y9eOnpXJ/sJySXXwm165nSRLh/FOqIyyvvdFWchYyfRRwMcccUzwJdQ/Gr9oT4r2HiyMX2n+EZrXTtL0S4OYER4y73JTozucAMegGBWjVSEpx5tI/5r9RLlaTtudr47/Z70nx18EbT4fLdjTRZw2i2WqWsQ8y3ltypSVQe/y+vc1JqXwa1bWfiT4F8ZX3iZJb/wAMWc9oYlswEvPOULI7fNlT8oIxxmvPvB8F18Jv2wG8C6BPMfBWv+G31ptIZy8Wm3Ec3l7ogfuK/dRxk+1dD+1f4z1Lw9YeAdBsr2bSbPxX4mtdH1HUYH2SQ2zbmdVf+EvtC5HOCaSVTmUIve7+/f8AIelm2tjV0X4Ef8IlrXjI+FfEZ03QfEglku9BkhWaC1upFKvNBggxls5K/dJ7Vh2v7JOnwfCbwh4U/t+6ttc8IHdofimyjWK8tjuJORyGU5wyngjtWD+1V8OtJ+F/wf1Lx74JjHhbxR4Y8q7tbuwYxm4USKrQygcSK4YjDZ5r6L8NahNq/hvS765i8i4urSKeWE/wMyBiv4E4pOdSMVUjLd/il/kwSi3ytHkuvfBDxD4g+Ivg/wAbnxrbxa94esLixQppqGG5E2BIzpu4PA+6QBXq/hjTdR0vSI4dW1L+1tQLM8t0IhEpyxICoCcADAHPavEPgHAi/tD/AB+XGUttS01IEJyIle0DuFHYFjk46mvoQHIrOtzJqEneyX46/qVC1rmX4r8OWnjDwzquh6gm+x1K1ltJ1x1R0Kn9DX5C+G9Jm/Z++L194O8UxRW17ot8Zba9mUL50B6OrHsyHI+pFfsfXgH7V37JWh/tK+Ho5DImk+K7GMrY6oEyCvXypR/EhP4g8jvWtCdNwqYav8FRNPyvpc9HBYyeX11iIRUtGmns4tWa/wAn0Z4v4jCS6PJcoyskaGUODwVxnOfTvXzS2rWNruImjGfmKxDJP5V1d34s+IH7OtivhP4p+Cbq90S3iNnDrNgC8csIG0Av91ht452t618tWfjZPD2vXljayvq3hkTN9huJyEuI4TyqsM8lRx17V87wRkGIyaviqOJj7srOMlZxaV+vR67Ox9Vwxxk8koPB1IKzd0308jp/F37RdvpU0tnpmkTyXaHBe+Hlqv8AwEcn86rfD/426tc6B4oF7M91q100MOnwRR8IzhlbaB6ce5JFC6PP8Yb1NI8O+FL3xNqLnbG1tASU99w+6PqQK+8v2NP+CfUfwvvbDxl4/jgutfgxLYaOhDxWT9pJG6PIO3Zfc81+ozrwy2XtObXoup8txZmWN4ovg8XiPaUbp2iuWPutNXXX8T3D9i74JzfA74GaVpeoReVruoOdS1JTyUlkAxH/AMBQKv1Br07xZ4Putf1XTtQsPEN/oN1aRTQEWixukySbCdyyKwyCgIPUc+tdQBgV5P8AGvwZ4g8U3ul22hTXFvb6tHJpGq3MExja0tmKyidefvDy2jGOf32e1fFSnKtVc5PVnnKKhFRXQ7fwD4J0v4deFLLw9o6ulla7yDK255Hd2d3Y92Z2Zj7muLt/2frDw74n1fXPB+v6r4Ol1eU3GoWenGOS0nmPWXyZFZVc9yoGe9cPpnhT4hyTr4muDf6f4gksbmaW0gmRommWa3jhhYHIIaKFn4x99uc1b0L/AIW5f6sUvnubSISyySIfLEZlWOcxhXHPks3kDAGffk1VpJtqXqTuldHtHhTw1/wiugRad/aN3qUqtJJJfXrBppZHdnZmwAOrcAAAAAdq5f4YfBuz+FTeJm0zV7+6/t/UZtWuRd+W2y5lxvdMKMDgfKeOK5vwdf8AxET4b+IpNRtribxE6pFp0F3tDxzPGquxYHBjWQl/YAgZ4rnbHw18TND8Nr4dgu76A6PDcfZb20nWX7ZmW3aFWaQbjtSS4U5/uA+lTZ6rm3KutHY9K+EHwfsPg1ol/pWl6lfX1neX8+pOL0oWWaZt0hBVRwT27VU8SfBHTNX8fL420jVdQ8MeKTALS5vtMZcXkIOVjnjdWR9vYkZHrXFapP8AE7Ttdtra3j1W802yupgbhGjZ7218yTIPICyBAu1sEkkdMGoNA0n4h6hPZGa71m0F3CGvbmRYlmgYLdOsKnnKqxgXd1br3NV713Pm1ZOm1j1Pwf8AC7TvCev6n4he4udY8SamiQ3WrX5BlaJM7IlCgKiAknaoAycnmrPxI+G2gfFjwrc+HfEdn9r0+ZlkG1ikkMinKSRuOVdTyCK84+FvjHxVe/ElNG8Q3Fy16dPmuL602xm3gI+z+TsK8qxDybgepzjIArHXQ/iRoum6TKBNcsmm3FsVs1KzWpe7gbcxMhErCNXIA28AjIzStLmvzajurbHcyfAyLW7HT9N8U+J9Y8W6PYyxzx6fqRiCSvGQ0ZmKIrS7WAOGJBIBINenhQFwOK+Xz41+Jdnous3N3NqQ1XR7XZe4gi+yqn2EPuUdWn850OBkdRnFbb3PxYTXLRLQah/Y4lJtJbxYmmKeaNwulU90yFIPGQTzTlCT0bQk12Ont/2eF03xf4u8R6V401/Sb/xTJHJqK2xg2MUTy02BoztIXjI5r1q0txaWsMAZnEaBAznLHAxkn1rwjT0+JumaxoAuJtV1O0ZrOW6hYRKC8iJ9oDSDG1Y2DELgg5IHavex0rOo5O3M7lxt0QtFFFZFFe7s4L2F4riCOeIg5SVAyn8DXkmo/CXwNcX08kvgzw9JIzks76VAST7nZRRXdhtmYz3PR/CugaXoWlxRabptpp8QUAJawLEo/BQK2x0FFFck/jZa2FpKKKgsRgM0goopMBWpMUUUgCnAD0oopICNYI0dpFjVZG+8wAyfqaeANtFFV0EhpiQ5BRSG+9x1+tLRRSEFOHSiihFH/9k=" alt="Sunmarke Logo" class="h-10 w-auto object-contain rounded bg-white p-1 shadow-lg shadow-purple-500/20">
+            <div>
+                <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 tracking-tight">Quantum Lab</h1>
+                <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Robot Arm Sim v1.0</h2>
+            </div>
+        </div>
+
+        <!-- BIGGER Achievement Bar -->
+        <div class="px-5 py-4 border-b border-slate-700 bg-slate-900/50">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-bold text-slate-300 uppercase tracking-wider">Achievements</span>
+                <span id="achievement-text" class="text-sm font-black text-emerald-400">0 / 8</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-3 shadow-inner border border-slate-700">
+                <div id="achievement-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-700 bg-slate-900/50">
+            <button id="tab-testmode" class="tab-btn active flex-1 py-3 text-sm text-slate-400 hover:text-slate-200 uppercase tracking-wider">Test Mode</button>
+            <button id="tab-challenges" class="tab-btn flex-1 py-3 text-sm text-slate-400 hover:text-slate-200 uppercase tracking-wider">Challenges</button>
+        </div>
+
+        <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-5 text-sm">
+            
+            <!-- FK Global Panel -->
+            <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700 shadow-inner">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-bold text-blue-400 uppercase tracking-wider">Forward Kinematics</h2>
+                    <span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded">Angles</span>
+                </div>
+                <div id="fk-sliders" class="space-y-1">
+                    <!-- Sliders generated dynamically via JavaScript -->
+                </div>
+                <button id="reset-btn" class="btn mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-semibold shadow-md">
+                    Reset to Home Position
+                </button>
+            </div>
+
+            <!-- Test Mode Panel -->
+            <div id="panel-testmode" class="block">
+                <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700 shadow-inner">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Inverse Kinematics</h2>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded">Target</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 mb-4 bg-slate-900 p-3 rounded-lg border border-slate-700">
+                        <div class="flex flex-col gap-1 items-center">
+                            <label class="text-xs font-bold text-red-400">X</label>
+                            <input type="number" id="ik-x" class="input-num text-center font-mono" value="5" step="0.5">
+                        </div>
+                        <div class="flex flex-col gap-1 items-center">
+                            <label class="text-xs font-bold text-green-400">Y</label>
+                            <input type="number" id="ik-y" class="input-num text-center font-mono" value="5" step="0.5">
+                        </div>
+                        <div class="flex flex-col gap-1 items-center">
+                            <label class="text-xs font-bold text-blue-400">Z</label>
+                            <input type="number" id="ik-z" class="input-num text-center font-mono" value="0" step="0.5">
+                        </div>
+                    </div>
+                    
+                    <button id="solve-ik-btn" class="btn w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white py-2.5 rounded-lg font-bold shadow-lg shadow-emerald-500/20">
+                        Solve IK (CCD Damped)
+                    </button>
+
+                    <!-- IK Warning Notification -->
+                    <div id="ik-warning" class="hidden mt-3 text-center py-2 px-3 rounded-lg font-bold text-xs bg-red-900/80 border border-red-700 text-red-200 shadow-inner">
+                        ⚠️ Warning: Target is unreachable or blocked!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Challenges Panel -->
+            <div id="panel-challenges" class="hidden">
+                <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700 shadow-inner">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-bold text-purple-400 uppercase tracking-wider">Active Challenge</h2>
+                        <span class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-1 rounded">Test</span>
+                    </div>
+                    
+                    <select id="challenge-select" class="w-full bg-slate-900 text-slate-200 border border-slate-600 rounded-lg p-2.5 mb-3 outline-none focus:border-purple-500 font-medium text-sm">
+                        <!-- Dynamically populated -->
+                    </select>
+                    
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span id="challenge-step-counter" class="text-xs font-bold text-indigo-400">Step 1 of X</span>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 mb-4 min-h-[60px] flex items-center">
+                        <p id="challenge-desc" class="text-xs text-slate-300 leading-relaxed"></p>
+                    </div>
+                    
+                    <div id="ik-disabled-badge" class="mb-3 text-center py-1.5 px-2 rounded font-bold text-[10px] bg-orange-900/80 border border-orange-700 text-orange-200 uppercase tracking-wider">
+                        ⚠ IK Disabled: Use FK Sliders manually
+                    </div>
+
+                    <!-- Sequence Controls (For Ch 6,7,8) -->
+                    <div id="sequence-panel" class="hidden mb-3">
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <span class="text-[10px] font-bold text-sky-400 uppercase tracking-wider">Waypoint Sequence</span>
+                            <button id="clear-poses-btn" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white shadow transition-all">Clear All</button>
+                        </div>
+                        <div id="pose-list" class="bg-slate-900 border border-slate-700 rounded p-2 mb-2 min-h-[44px] max-h-[100px] overflow-y-auto text-xs text-slate-400 space-y-1 shadow-inner">
+                            <div class="text-slate-500 italic text-center py-1">No poses saved yet.</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="save-pose-btn" class="btn flex-1 bg-sky-700 hover:bg-sky-600 text-white py-2 rounded font-bold shadow-md shadow-sky-900/20 text-xs">
+                                + Save Pose Block
+                            </button>
+                            <button id="play-sequence-btn" class="btn flex-1 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white py-2 rounded font-bold shadow-md shadow-emerald-900/20 text-xs flex items-center justify-center gap-1">
+                                ▶ Play Sequence
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Standard Check Button (For Ch 1-5) -->
+                    <button id="check-challenge-btn" class="btn w-full bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-500 hover:to-indigo-400 text-white py-2.5 rounded-lg font-bold shadow-lg shadow-purple-500/20 mb-2">
+                        Evaluate Position
+                    </button>
+                    
+                    <div id="challenge-status" class="hidden text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300">
+                        <!-- Status Message displays here -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="p-3 text-[10px] text-slate-500 border-t border-slate-800 text-center uppercase tracking-widest bg-slate-900">
+            Drag to rotate • Scroll to zoom
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let joints = []; 
+        let endEffector; 
+        
+        let sandboxGroup = new THREE.Group();
+        let sandboxTargetMarker;
+
+        let challengeGroup = new THREE.Group();
+        let challengeMarkersGroup = new THREE.Group();
+        let challengeObstaclesGroup = new THREE.Group();
+        let activeObstacleBoxes = [];
+        
+        let currentTab = 'testmode'; 
+        
+        let completedChallenges = new Set();
+        let recordedPoses = []; 
+        let currentAdjustmentPath = []; 
+        let masterEngineerAwarded = false;
+
+        // Robot Joint Config
+        const robotConfig = [
+            { name: "J1 (Base)",     axis: 'y', length: 2.0, color: 0xef4444, min: -160, max: 160 },
+            { name: "J2 (Shoulder)", axis: 'z', length: 3.5, color: 0xf97316, min: -130, max: 130 },
+            { name: "J3 (Elbow)",    axis: 'z', length: 3.0, color: 0xeab308, min: -140, max: 140 },
+            { name: "J4 (Wrist 1)",  axis: 'y', length: 1.5, color: 0x22c55e, min: -180, max: 180 },
+            { name: "J5 (Wrist 2)",  axis: 'z', length: 1.2, color: 0x3b82f6, min: -150, max: 150 },
+            { name: "J6 (Wrist 3)",  axis: 'x', length: 0.8, color: 0xa855f7, min: -180, max: 180 } 
+        ];
+
+        // All Challenges mapped strictly to FK. 6,7,8 use sequenceMode.
+        const challenges = [
+            {
+                id: 1, title: "Challenge 1: Basic Forward Reach", disableIK: true, sequenceMode: false,
+                steps: [{ type: "ik", description: "Reach the Green Target directly in front. (Use FK sliders manually)", targets: { position: new THREE.Vector3(6, 4, 0) }, color: 0x22c55e }]
+            },
+            {
+                id: 2, title: "Challenge 2: Low Ground Pickup", disableIK: true, sequenceMode: false,
+                steps: [{ type: "ik", description: "Carefully reach the Blue Target near the ground without hitting the floor. (Use FK sliders manually)", targets: { position: new THREE.Vector3(4, 1, 4) }, color: 0x3b82f6 }]
+            },
+            {
+                id: 3, title: "Challenge 3: Dual Waypoints", disableIK: true, sequenceMode: false,
+                steps: [
+                    { type: "ik", description: "Action 1: Reach the Yellow target on the left. (Use FK sliders manually)", targets: { position: new THREE.Vector3(0, 5, -5) }, color: 0xfacc15 },
+                    { type: "ik", description: "Action 2: Swing around to reach the Orange target on the right. (Use FK sliders manually)", targets: { position: new THREE.Vector3(0, 5, 5) }, color: 0xf97316 }
+                ]
+            },
+            {
+                id: 4, title: "Challenge 4: High Ceiling Reach", disableIK: true, sequenceMode: false,
+                steps: [{ type: "ik", description: "Extend fully to reach the Purple Target high above. (Use FK sliders manually)", targets: { position: new THREE.Vector3(2, 9, 0) }, color: 0xa855f7 }]
+            },
+            {
+                id: 5, title: "Challenge 5: Constrained Joint", disableIK: true, sequenceMode: false,
+                steps: [
+                    { 
+                        type: "combined", 
+                        description: "Reach the Red Target, but you MUST keep the Base joint (J1) fixed at exactly 110°.", 
+                        targets: { 
+                            position: new THREE.Vector3(4, 5, 4), 
+                            joints: [110, null, null, null, null, null] 
+                        }, 
+                        color: 0xef4444 
+                    }
+                ]
+            },
+            {
+                id: 6, title: "Challenge 6: The Tri-Ball Run", disableIK: true, sequenceMode: true,
+                steps: [
+                    { type: "ik", description: "Hit all 3 balls in a single run. Navigate arm to Ball 1 (RED), click '+ Save Pose Block'.", targets: { position: new THREE.Vector3(4, 5, 4) }, color: 0xef4444 },
+                    { type: "ik", description: "Navigate to Ball 2 (GREEN) and click '+ Save Pose Block'.", targets: { position: new THREE.Vector3(-4, 4, 3) }, color: 0x22c55e },
+                    { type: "ik", description: "Navigate to Ball 3 (BLUE), save your final pose block, then click '▶ Play Sequence'.", targets: { position: new THREE.Vector3(3, 2, -4) }, color: 0x3b82f6 }
+                ]
+            },
+            {
+                id: 7, title: "Challenge 7: The Wall (Obstacle)", disableIK: true, sequenceMode: true,
+                obstacles: [
+                    { position: [0, 1.75, 3], size: [8, 3.5, 0.5], color: 0x8b5cf6, name: "Barrier Wall" } 
+                ],
+                steps: [
+                    { type: "ik", description: "Step 1: Hit Ball 1 (YELLOW) near the floor in front of the wall, then click '+ Save Pose Block'.", targets: { position: new THREE.Vector3(3, 1, 1.5) }, color: 0xfacc15 },
+                    { type: "ik", description: "Step 2: Maneuver OVER the wall to hit Ball 2 (GREEN) on the other side. Save pose and Play Sequence.", targets: { position: new THREE.Vector3(0, 2, 5.5) }, color: 0x10b981 }
+                ]
+            },
+            {
+                id: 8, title: "Challenge 8: The Overhang (Obstacle)", disableIK: true, sequenceMode: true,
+                obstacles: [
+                    { position: [4, 6.8, 0], size: [4, 0.2, 4], color: 0xf43f5e, name: "Ceiling Block" } 
+                ],
+                steps: [
+                    { type: "ik", description: "Step 1: Hit Ball 1 (YELLOW) above the ceiling block, then click '+ Save Pose Block'.", targets: { position: new THREE.Vector3(5, 7.2, 0) }, color: 0xfacc15 },
+                    { type: "ik", description: "Step 2: Maneuver to hit Ball 2 (ORANGE) UNDERneath the ceiling block. Save pose and Play Sequence.", targets: { position: new THREE.Vector3(5, 2, 0) }, color: 0xf97316 }
+                ]
+            }
+        ];
+        let currentChallenge = challenges[0];
+        let currentStepIndex = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+            
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(18, 12, 22);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.target.set(0, 4, 0);
+            controls.maxDistance = 50;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const spotLight = new THREE.SpotLight(0xffffff, 1.5);
+            spotLight.position.set(10, 25, 15);
+            spotLight.angle = Math.PI / 4;
+            spotLight.penumbra = 0.5;
+            spotLight.castShadow = true;
+            spotLight.shadow.mapSize.width = 2048;
+            spotLight.shadow.mapSize.height = 2048;
+            scene.add(spotLight);
+
+            const fillLight = new THREE.DirectionalLight(0x3b82f6, 0.3);
+            fillLight.position.set(-10, 10, -10);
+            scene.add(fillLight);
+
+            const gridHelper = new THREE.GridHelper(30, 30, 0x334155, 0x1e293b);
+            scene.add(gridHelper);
+            
+            scene.add(sandboxGroup);
+            challengeGroup.add(challengeMarkersGroup);
+            challengeGroup.add(challengeObstaclesGroup);
+            scene.add(challengeGroup);
+
+            buildRobotArm();
+            buildFKUI();
+            setupTabs();
+            setupSandboxTarget();
+            setupChallenges();
+            
+            switchTab('testmode');
+            window.addEventListener('resize', onWindowResize);
+
+            // CHEAT CODE LISTENER: Shift + N to jump to next challenge
+            window.addEventListener('keydown', (e) => {
+                if (e.shiftKey && e.key.toLowerCase() === 'n') {
+                    if (currentTab === 'challenges') {
+                        completeCurrentChallenge();
+
+                        const selectEl = document.getElementById('challenge-select');
+                        let nextIdx = parseInt(selectEl.value) + 1;
+                        if (nextIdx < challenges.length) {
+                            selectEl.value = nextIdx;
+                            loadChallenge(nextIdx);
+                            
+                            const statusEl = document.getElementById('challenge-status');
+                            statusEl.innerHTML = `⏭️ CHEAT USED: Skipped to Challenge ${nextIdx + 1}`;
+                            statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-purple-600 text-white mt-2 block";
+                            statusEl.classList.remove('hidden');
+                        }
+                    }
+                }
+            });
+        }
+
+        function triggerConfetti() {
+            if(masterEngineerAwarded) return;
+            masterEngineerAwarded = true;
+
+            const container = document.getElementById('confetti-container');
+            container.classList.remove('hidden');
+            const colors = ['#a855f7', '#3b82f6', '#22c55e', '#ef4444', '#facc15'];
+            
+            for (let i = 0; i < 150; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'absolute';
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = Math.random() * 10 + 5 + 'px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-20px';
+                confetti.style.opacity = Math.random() + 0.5;
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                
+                const duration = Math.random() * 4 + 2;
+                confetti.style.transition = `top ${duration}s ease-in, left ${duration}s ease-in, transform ${duration}s linear`;
+                
+                container.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.style.top = '100vh';
+                    confetti.style.left = (parseFloat(confetti.style.left) + (Math.random() * 20 - 10)) + 'vw';
+                    confetti.style.transform = `rotate(${Math.random() * 360 + 360}deg)`;
+                }, 50);
+            }
+            
+            const popup = document.createElement('div');
+            popup.className = 'absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 border-2 border-emerald-500 p-8 rounded-2xl shadow-[0_0_50px_rgba(16,185,129,0.5)] z-50 text-center flex flex-col items-center backdrop-blur-md';
+            popup.innerHTML = `
+                <div class="text-6xl mb-4">🏆</div>
+                <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 mb-2">MASTER ENGINEER</h2>
+                <p class="text-slate-300">Congratulations! You have successfully completed all 8 Sanmarki challenges!</p>
+                <button onclick="this.parentElement.remove(); document.getElementById('confetti-container').innerHTML=''; document.getElementById('confetti-container').classList.add('hidden');" class="mt-6 px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-lg font-bold transition-all shadow-lg shadow-emerald-500/20">Awesome!</button>
+            `;
+            document.body.appendChild(popup);
+        }
+
+        function completeCurrentChallenge() {
+            completedChallenges.add(currentChallenge.id);
+            const progress = (completedChallenges.size / 8) * 100;
+            document.getElementById('achievement-text').innerText = `${completedChallenges.size} / 8`;
+            document.getElementById('achievement-bar').style.width = `${progress}%`;
+            
+            if(completedChallenges.size === 8) {
+                triggerConfetti();
+            }
+        }
+
+        function buildRobotArm() {
+            const baseGeo = new THREE.CylinderGeometry(2, 2.2, 0.5, 32);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7, metalness: 0.2 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.25;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            scene.add(base);
+
+            let currentParent = base;
+            let currentHeight = 0.25;
+
+            robotConfig.forEach((cfg, index) => {
+                const jointGroup = new THREE.Group();
+                jointGroup.position.y = currentHeight;
+                currentParent.add(jointGroup);
+                joints.push(jointGroup);
+
+                const jointVisGeo = new THREE.CylinderGeometry(0.8, 0.8, 1.2, 32);
+                if(cfg.axis === 'x') jointVisGeo.rotateZ(Math.PI/2);
+                if(cfg.axis === 'z') jointVisGeo.rotateX(Math.PI/2);
+                const jointVisMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.5, metalness: 0.1 });
+                const jointVis = new THREE.Mesh(jointVisGeo, jointVisMat);
+                jointVis.castShadow = true;
+                jointGroup.add(jointVis);
+
+                const linkGeo = new THREE.CylinderGeometry(0.5, 0.6, cfg.length, 16);
+                linkGeo.translate(0, cfg.length / 2, 0); 
+                const linkMat = new THREE.MeshStandardMaterial({ color: cfg.color, roughness: 0.6, metalness: 0.1 });
+                const link = new THREE.Mesh(linkGeo, linkMat);
+                link.castShadow = true;
+                link.receiveShadow = true;
+                jointGroup.add(link);
+
+                currentParent = jointGroup;
+                currentHeight = cfg.length;
+            });
+
+            const eeGeo = new THREE.SphereGeometry(0.5, 32, 32);
+            const eeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.4, metalness: 0.1 });
+            endEffector = new THREE.Mesh(eeGeo, eeMat);
+            endEffector.position.y = currentHeight;
+            currentParent.add(endEffector);
+        }
+
+        function checkCollision() {
+            scene.updateMatrixWorld(true);
+            
+            for (let k = 2; k < joints.length; k++) {
+                let checkPos = new THREE.Vector3();
+                joints[k].getWorldPosition(checkPos);
+                if (checkPos.y < 0.02) return true;
+            }
+            let eeCheck = new THREE.Vector3();
+            endEffector.getWorldPosition(eeCheck);
+            if (eeCheck.y < 0.02) return true;
+
+            if (currentTab === 'challenges' && activeObstacleBoxes.length > 0) {
+                // Expanding the bounding box by the physical radius of the arm links (0.45) 
+                // to prevent clipping on thin objects like the Ceiling Plate.
+                for(let i = 0; i < joints.length - 1; i++) {
+                    let p1 = new THREE.Vector3();
+                    let p2 = new THREE.Vector3();
+                    joints[i].getWorldPosition(p1);
+                    joints[i+1].getWorldPosition(p2);
+                    
+                    const dist = p1.distanceTo(p2);
+                    const segments = Math.max(10, Math.ceil(dist * 5)); 
+                    
+                    for(let j = 0; j <= segments; j++) {
+                        let pt = p1.clone().lerp(p2, j/segments);
+                        for(let box of activeObstacleBoxes) {
+                            let collisionBox = box.clone().expandByScalar(0.45); 
+                            if(collisionBox.containsPoint(pt)) return true;
+                        }
+                    }
+                }
+                
+                let pFinal = new THREE.Vector3();
+                joints[joints.length - 1].getWorldPosition(pFinal);
+                const distFinal = pFinal.distanceTo(eeCheck);
+                const segmentsFinal = Math.max(5, Math.ceil(distFinal * 5));
+                
+                for(let j = 0; j <= segmentsFinal; j++) {
+                    let pt = pFinal.clone().lerp(eeCheck, j/segmentsFinal);
+                    for(let box of activeObstacleBoxes) {
+                        let collisionBox = box.clone().expandByScalar(0.45);
+                        if(collisionBox.containsPoint(pt)) return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function buildFKUI() {
+            const fkContainer = document.getElementById('fk-sliders');
+            
+            robotConfig.forEach((cfg, i) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'slider-container bg-slate-900/50 p-2 rounded border border-slate-700/50';
+                
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-center mb-1';
+                
+                const label = document.createElement('label');
+                label.innerText = cfg.name;
+                label.className = 'text-slate-300 font-medium text-xs';
+                
+                const valueDisp = document.createElement('span');
+                valueDisp.id = `val-j${i}`;
+                valueDisp.innerText = '0°';
+                valueDisp.className = 'text-blue-400 font-mono text-xs font-bold w-10 text-right';
+                
+                header.appendChild(label);
+                header.appendChild(valueDisp);
+                
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.min = cfg.min;
+                slider.max = cfg.max;
+                slider.value = '0';
+                slider.id = `slider-j${i}`;
+                
+                slider.addEventListener('input', (e) => {
+                    const deg = parseFloat(e.target.value);
+                    const rad = deg * (Math.PI / 180);
+                    const prevRad = joints[i].rotation[cfg.axis];
+                    
+                    joints[i].rotation.set(0, 0, 0); 
+                    joints[i].rotation[cfg.axis] = rad;
+                    
+                    if (i < 4 && checkCollision()) {
+                        joints[i].rotation[cfg.axis] = prevRad;
+                        scene.updateMatrixWorld(true);
+                        const prevDeg = Math.round(prevRad * (180 / Math.PI));
+                        slider.value = prevDeg;
+                        valueDisp.innerText = `${prevDeg}°`;
+                    } else {
+                        valueDisp.innerText = `${deg}°`;
+                    }
+                });
+
+                slider.addEventListener('change', () => {
+                    if (currentTab === 'challenges' && currentChallenge.sequenceMode) {
+                        const newWaypoint = joints.map((j, idx) => j.rotation[robotConfig[idx].axis]);
+                        currentAdjustmentPath.push(newWaypoint);
+                    }
+                });
+                
+                wrapper.appendChild(header);
+                wrapper.appendChild(slider);
+                fkContainer.appendChild(wrapper);
+            });
+
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                for(let i=0; i<6; i++) {
+                    const slider = document.getElementById(`slider-j${i}`);
+                    slider.value = 0;
+                    slider.dispatchEvent(new Event('input')); 
+                    slider.dispatchEvent(new Event('change')); 
+                }
+            });
+        }
+
+        function updateFKUIFromJoints() {
+            for(let i=0; i<6; i++) {
+                const cfg = robotConfig[i];
+                let rad = joints[i].rotation[cfg.axis];
+                rad = Math.atan2(Math.sin(rad), Math.cos(rad));
+                const deg = Math.round(rad * (180 / Math.PI));
+                
+                document.getElementById(`slider-j${i}`).value = deg;
+                document.getElementById(`val-j${i}`).innerText = `${deg}°`;
+            }
+        }
+
+        function setupTabs() {
+            const btnTestMode = document.getElementById('tab-testmode');
+            const btnChallenges = document.getElementById('tab-challenges');
+
+            btnTestMode.addEventListener('click', () => switchTab('testmode'));
+            btnChallenges.addEventListener('click', () => switchTab('challenges'));
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const btnTestMode = document.getElementById('tab-testmode');
+            const btnChallenges = document.getElementById('tab-challenges');
+            const panelTestMode = document.getElementById('panel-testmode');
+            const panelChallenges = document.getElementById('panel-challenges');
+
+            if (tab === 'testmode') {
+                btnTestMode.classList.add('active');
+                btnChallenges.classList.remove('active');
+                panelTestMode.classList.remove('hidden');
+                panelChallenges.classList.add('hidden');
+                
+                sandboxGroup.visible = true;
+                challengeGroup.visible = false;
+            } else {
+                btnChallenges.classList.add('active');
+                btnTestMode.classList.remove('active');
+                panelChallenges.classList.remove('hidden');
+                panelTestMode.classList.add('hidden');
+                
+                sandboxGroup.visible = false;
+                challengeGroup.visible = true;
+            }
+
+            for(let i=0; i<6; i++) {
+                const slider = document.getElementById(`slider-j${i}`);
+                if(slider) {
+                    slider.value = 0;
+                    slider.dispatchEvent(new Event('input')); 
+                }
+            }
+        }
+
+        function setupSandboxTarget() {
+            const targetGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const targetMat = new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true });
+            sandboxTargetMarker = new THREE.Mesh(targetGeo, targetMat);
+            sandboxGroup.add(sandboxTargetMarker);
+            
+            updateSandboxMarkerPosition();
+
+            ['ik-x', 'ik-y', 'ik-z'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateSandboxMarkerPosition);
+            });
+
+            document.getElementById('solve-ik-btn').addEventListener('click', () => {
+                for(let i = 0; i < 6; i++) {
+                    joints[i].rotation.set(0, 0, 0);
+                }
+                scene.updateMatrixWorld(true);
+                updateFKUIFromJoints();
+                
+                solveIK(sandboxTargetMarker.position.clone());
+            });
+        }
+
+        function updateSandboxMarkerPosition() {
+            const x = parseFloat(document.getElementById('ik-x').value) || 0;
+            const y = parseFloat(document.getElementById('ik-y').value) || 0;
+            const z = parseFloat(document.getElementById('ik-z').value) || 0;
+            sandboxTargetMarker.position.set(x, y, z);
+            
+            const warningEl = document.getElementById('ik-warning');
+            if (warningEl) warningEl.classList.add('hidden');
+        }
+
+        function solveIK(targetPos) {
+            const maxIterations = 100;
+            const distanceThreshold = 0.05; 
+            const maxStepRadius = 0.5; 
+            const dampingFactor = 0.5; 
+            
+            for (let iter = 0; iter < maxIterations; iter++) {
+                scene.updateMatrixWorld(true);
+                let eePos = new THREE.Vector3();
+                endEffector.getWorldPosition(eePos);
+                
+                if (eePos.distanceTo(targetPos) < distanceThreshold) break;
+
+                for (let i = joints.length - 1; i >= 0; i--) {
+                    if (i === 5) continue; 
+
+                    const joint = joints[i];
+                    const axisName = robotConfig[i].axis;
+
+                    scene.updateMatrixWorld(true);
+
+                    let jPos = new THREE.Vector3();
+                    joint.getWorldPosition(jPos);
+                    endEffector.getWorldPosition(eePos);
+
+                    let localAxis = new THREE.Vector3();
+                    localAxis[axisName] = 1; 
+                    let axisWorld = localAxis.clone().transformDirection(joint.matrixWorld).normalize();
+
+                    let jToEe = eePos.clone().sub(jPos);
+                    let jToTarget = targetPos.clone().sub(jPos);
+
+                    if (jToEe.lengthSq() < 0.0001 || jToTarget.lengthSq() < 0.0001) continue;
+
+                    jToEe.projectOnPlane(axisWorld);
+                    jToTarget.projectOnPlane(axisWorld);
+                    
+                    if (jToEe.lengthSq() < 0.00001 || jToTarget.lengthSq() < 0.00001) continue;
+
+                    jToEe.normalize();
+                    jToTarget.normalize();
+
+                    let dotProd = THREE.MathUtils.clamp(jToEe.dot(jToTarget), -1.0, 1.0);
+                    let angle = Math.acos(dotProd);
+
+                    if (angle > 0.001 && !isNaN(angle)) {
+                        let cross = jToEe.clone().cross(jToTarget);
+                        if (cross.dot(axisWorld) < 0) angle = -angle;
+
+                        let step = THREE.MathUtils.clamp(angle, -maxStepRadius, maxStepRadius) * dampingFactor;
+                        let oldAngle = joint.rotation[axisName];
+                        
+                        let newAngle = oldAngle + step;
+                        const minRad = robotConfig[i].min * (Math.PI / 180);
+                        const maxRad = robotConfig[i].max * (Math.PI / 180);
+                        
+                        if (robotConfig[i].min <= -180 && robotConfig[i].max >= 180) {
+                            newAngle = Math.atan2(Math.sin(newAngle), Math.cos(newAngle));
+                        } else {
+                            newAngle = THREE.MathUtils.clamp(newAngle, minRad, maxRad);
+                        }
+
+                        if (Math.abs(newAngle - oldAngle) > 0.0001) {
+                            joint.rotation[axisName] = newAngle;
+
+                            if (checkCollision()) {
+                                joint.rotation[axisName] = oldAngle; 
+                                scene.updateMatrixWorld(true);
+                            }
+                        }
+                    }
+                }
+            }
+            updateFKUIFromJoints();
+            
+            if (currentTab === 'testmode') {
+                scene.updateMatrixWorld(true);
+                let finalEePos = new THREE.Vector3();
+                endEffector.getWorldPosition(finalEePos);
+                const finalDist = finalEePos.distanceTo(targetPos);
+                
+                const warningEl = document.getElementById('ik-warning');
+                if (warningEl) {
+                    if (finalDist > 0.2) {
+                        warningEl.classList.remove('hidden');
+                    } else {
+                        warningEl.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        // --- SEQUENCE MODE LOGIC ---
+        
+        function clearPoses() {
+            recordedPoses = [];
+            currentAdjustmentPath = [];
+            renderPoseList();
+            document.getElementById('challenge-status').classList.add('hidden');
+        }
+
+        function savePose() {
+            const finalPose = joints.map((j, i) => j.rotation[robotConfig[i].axis]);
+            currentAdjustmentPath.push(finalPose);
+
+            let cleanPath = [];
+            for(let i = 0; i < currentAdjustmentPath.length; i++) {
+                if(i === 0 || JSON.stringify(currentAdjustmentPath[i]) !== JSON.stringify(cleanPath[cleanPath.length - 1])) {
+                    cleanPath.push(currentAdjustmentPath[i]);
+                }
+            }
+
+            recordedPoses.push({
+                path: cleanPath
+            });
+            
+            renderPoseList();
+            currentAdjustmentPath = [];
+        }
+
+        window.deletePose = function(index) {
+            recordedPoses.splice(index, 1);
+            renderPoseList();
+        }
+
+        function renderPoseList() {
+            const list = document.getElementById('pose-list');
+            if (recordedPoses.length === 0) {
+                list.innerHTML = '<div class="text-slate-500 italic text-center py-1">No poses saved yet.</div>';
+                return;
+            }
+
+            list.innerHTML = '';
+            recordedPoses.forEach((pose, idx) => {
+                const item = document.createElement('div');
+                item.className = 'px-2 py-1.5 bg-slate-800 rounded flex justify-between items-center border border-slate-700 shadow-sm';
+                item.innerHTML = `
+                    <span class="text-sky-400 font-bold">Pose Block ${idx + 1}</span> 
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-500 font-mono text-[10px] uppercase">${pose.path.length} Waypoints</span>
+                        <button onclick="deletePose(${idx})" class="text-red-400 hover:text-red-300 font-bold px-1.5 py-0.5 bg-red-950/50 rounded border border-red-800/50 transition-all text-xs" title="Delete Pose">✕</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            list.scrollTop = list.scrollHeight;
+        }
+
+        async function animateToPose(targetAngles, duration = 800) {
+            const startAngles = joints.map((j, i) => j.rotation[robotConfig[i].axis]);
+            const startTime = performance.now();
+            return new Promise(resolve => {
+                function step(time) {
+                    const elapsed = time - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                    
+                    for(let i=0; i<6; i++) {
+                        joints[i].rotation[robotConfig[i].axis] = startAngles[i] + (targetAngles[i] - startAngles[i]) * ease;
+                    }
+                    scene.updateMatrixWorld(true);
+                    updateFKUIFromJoints();
+                    
+                    if (checkCollision()) { 
+                        for(let i=0; i<6; i++) joints[i].rotation[robotConfig[i].axis] = startAngles[i];
+                        scene.updateMatrixWorld(true);
+                        updateFKUIFromJoints();
+                        resolve(false);
+                        return;
+                    }
+
+                    if (progress < 1) requestAnimationFrame(step);
+                    else resolve(true); 
+                }
+                requestAnimationFrame(step);
+            });
+        }
+
+        async function playSequence() {
+            if (recordedPoses.length === 0) return;
+            
+            const statusEl = document.getElementById('challenge-status');
+            statusEl.classList.remove('hidden', 'bg-emerald-600', 'bg-red-600', 'bg-blue-600', 'text-white', 'text-red-200', 'bg-sky-600');
+            statusEl.innerHTML = "⏳ Resetting to home & playing...";
+            statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-sky-600 text-white mt-2 block";
+            
+            document.getElementById('save-pose-btn').disabled = true;
+            document.getElementById('play-sequence-btn').disabled = true;
+            document.getElementById('clear-poses-btn').disabled = true;
+            document.getElementById('challenge-select').disabled = true;
+            
+            for(let i = 0; i < 6; i++) {
+                joints[i].rotation.set(0, 0, 0);
+            }
+            scene.updateMatrixWorld(true);
+            updateFKUIFromJoints();
+
+            currentStepIndex = 0;
+            updateChallengeUI();
+
+            let sequenceSuccess = false;
+            let failed = false;
+            
+            for (let pIdx = 0; pIdx < recordedPoses.length; pIdx++) {
+                const poseBlock = recordedPoses[pIdx];
+                
+                for(let wIdx = 0; wIdx < poseBlock.path.length; wIdx++) {
+                    const waypoint = poseBlock.path[wIdx];
+                    const moveSuccess = await animateToPose(waypoint, 600); 
+                    
+                    if (!moveSuccess) { 
+                        statusEl.innerHTML = `❌ FAILED: Collision during Pose Block ${pIdx + 1} (Waypoint ${wIdx + 1})!`;
+                        statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-red-900/80 border border-red-700 text-red-200 mt-2 block";
+                        failed = true;
+                        break;
+                    }
+                }
+                
+                if (failed) break;
+                
+                while (currentStepIndex < currentChallenge.steps.length) {
+                    let stepPassed = false;
+                    const currentStep = currentChallenge.steps[currentStepIndex];
+                    
+                    if (currentStep.type === 'ik' || currentStep.type === 'combined') {
+                        scene.updateMatrixWorld(true);
+                        let eePos = new THREE.Vector3();
+                        endEffector.getWorldPosition(eePos);
+                        if (eePos.distanceTo(currentStep.targets.position) <= 0.8) stepPassed = true;
+                    }
+                    
+                    if (stepPassed) {
+                        currentStepIndex++;
+                        updateChallengeUI();
+                        if (currentStepIndex >= currentChallenge.steps.length) {
+                            sequenceSuccess = true;
+                            break;
+                        }
+                    } else {
+                        break; 
+                    }
+                }
+                
+                if (sequenceSuccess) break;
+
+                await new Promise(r => setTimeout(r, 1500));
+            }
+            
+            if (!failed) {
+                if (sequenceSuccess) {
+                    completeCurrentChallenge();
+
+                    statusEl.innerHTML = "✨ SUCCESS! Challenge Complete.";
+                    statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-emerald-600 text-white mt-2 block";
+                } else {
+                    statusEl.innerHTML = `❌ FAILED: Sequence ended before completing all targets.`;
+                    statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-red-900/80 border border-red-700 text-red-200 mt-2 block";
+                }
+            }
+            
+            document.getElementById('save-pose-btn').disabled = false;
+            document.getElementById('play-sequence-btn').disabled = false;
+            document.getElementById('clear-poses-btn').disabled = false;
+            document.getElementById('challenge-select').disabled = false;
+        }
+
+        // --- END SEQUENCE LOGIC ---
+
+        function setupChallenges() {
+            const selectEl = document.getElementById('challenge-select');
+            selectEl.innerHTML = '';
+            challenges.forEach((ch, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = ch.title;
+                selectEl.appendChild(opt);
+            });
+
+            selectEl.addEventListener('change', (e) => loadChallenge(parseInt(e.target.value)));
+            
+            document.getElementById('check-challenge-btn').addEventListener('click', checkChallengeStep);
+            document.getElementById('save-pose-btn').addEventListener('click', savePose);
+            document.getElementById('clear-poses-btn').addEventListener('click', clearPoses);
+            document.getElementById('play-sequence-btn').addEventListener('click', playSequence);
+            
+            loadChallenge(0);
+        }
+
+        function loadChallenge(index) {
+            currentChallenge = challenges[index];
+            currentStepIndex = 0;
+            
+            for(let i = 0; i < 6; i++) {
+                joints[i].rotation.set(0, 0, 0);
+            }
+            scene.updateMatrixWorld(true);
+            updateFKUIFromJoints();
+            
+            clearPoses(); 
+            
+            while(challengeMarkersGroup.children.length > 0) challengeMarkersGroup.remove(challengeMarkersGroup.children[0]); 
+            while(challengeObstaclesGroup.children.length > 0) challengeObstaclesGroup.remove(challengeObstaclesGroup.children[0]);
+            activeObstacleBoxes = [];
+
+            currentChallenge.steps.forEach((step, idx) => {
+                if (step.targets.position) {
+                    const chGeo = new THREE.SphereGeometry(0.5, 16, 16);
+                    const chMat = new THREE.MeshBasicMaterial({ color: step.color || 0xfacc15, wireframe: true, transparent: true, opacity: 0.2 });
+                    const marker = new THREE.Mesh(chGeo, chMat);
+                    marker.position.copy(step.targets.position);
+                    marker.userData = { stepIndex: idx };
+                    challengeMarkersGroup.add(marker);
+                }
+            });
+
+            if (currentChallenge.obstacles) {
+                currentChallenge.obstacles.forEach(obs => {
+                    const obsGeo = new THREE.BoxGeometry(obs.size[0], obs.size[1], obs.size[2]);
+                    const obsMat = new THREE.MeshStandardMaterial({ 
+                        color: obs.color, 
+                        transparent: true, 
+                        opacity: 0.8,
+                        roughness: 0.2 
+                    });
+                    const mesh = new THREE.Mesh(obsGeo, obsMat);
+                    mesh.position.set(obs.position[0], obs.position[1], obs.position[2]);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    challengeObstaclesGroup.add(mesh);
+
+                    scene.updateMatrixWorld(true);
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    activeObstacleBoxes.push(box);
+                });
+            }
+
+            updateChallengeUI();
+            document.getElementById('challenge-status').classList.add('hidden');
+        }
+
+        function updateChallengeUI() {
+            const step = currentChallenge.steps[currentStepIndex] || currentChallenge.steps[currentChallenge.steps.length - 1];
+            document.getElementById('challenge-desc').innerText = step.description;
+            document.getElementById('challenge-step-counter').innerText = `Step ${Math.min(currentStepIndex + 1, currentChallenge.steps.length)} of ${currentChallenge.steps.length}`;
+            
+            const seqPanel = document.getElementById('sequence-panel');
+            const evalBtn = document.getElementById('check-challenge-btn');
+            
+            if (currentChallenge.sequenceMode) {
+                seqPanel.classList.remove('hidden');
+                evalBtn.classList.add('hidden');
+            } else {
+                seqPanel.classList.add('hidden');
+                evalBtn.classList.remove('hidden');
+            }
+
+            challengeMarkersGroup.children.forEach(marker => {
+                if (marker.userData.stepIndex === currentStepIndex) {
+                    marker.material.opacity = 0.9;
+                    marker.material.wireframe = false;
+                    marker.visible = true;
+                } else if (marker.userData.stepIndex < currentStepIndex) {
+                    marker.visible = false;
+                } else {
+                    marker.material.opacity = 0.25;
+                    marker.material.wireframe = true;
+                    marker.visible = true;
+                }
+            });
+        }
+
+        function checkChallengeStep() {
+            const statusEl = document.getElementById('challenge-status');
+            statusEl.classList.remove('hidden', 'bg-emerald-600', 'bg-red-600', 'bg-blue-600', 'text-white', 'text-red-200');
+            
+            let isSuccess = true;
+            let failReason = "";
+            const currentStep = currentChallenge.steps[currentStepIndex];
+
+            if (currentStep.type === 'fk' || currentStep.type === 'combined') {
+                for(let i = 0; i < 6; i++) {
+                    const targetAngle = currentStep.targets.joints[i];
+                    if (targetAngle !== null && targetAngle !== undefined) {
+                        let currentRad = joints[i].rotation[robotConfig[i].axis];
+                        currentRad = Math.atan2(Math.sin(currentRad), Math.cos(currentRad));
+                        const currentDeg = currentRad * (180 / Math.PI);
+                        if (Math.abs(currentDeg - targetAngle) > 3.0) {
+                            isSuccess = false;
+                            failReason = `Joint ${i+1} is at ${Math.round(currentDeg)}°, target is ${targetAngle}°.`;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (isSuccess && (currentStep.type === 'ik' || currentStep.type === 'combined')) {
+                scene.updateMatrixWorld(true);
+                let eePos = new THREE.Vector3();
+                endEffector.getWorldPosition(eePos);
+                const dist = eePos.distanceTo(currentStep.targets.position);
+                
+                if (dist > 0.8) {
+                    isSuccess = false;
+                    if(activeObstacleBoxes.length > 0) {
+                        failReason = `End effector missed. Dist: ${dist.toFixed(2)}. Obstacles might be blocking the path!`;
+                    } else {
+                        failReason = `End effector is too far. Dist: ${dist.toFixed(2)} units.`;
+                    }
+                }
+            }
+
+            if (isSuccess) {
+                if (currentStepIndex < currentChallenge.steps.length - 1) {
+                    currentStepIndex++;
+                    updateChallengeUI();
+                    statusEl.innerHTML = "✅ Action Complete! Moving to next...";
+                    statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-blue-600 text-white mt-2 block";
+                } else {
+                    completeCurrentChallenge();
+
+                    statusEl.innerHTML = "✨ SUCCESS! Challenge Complete.";
+                    statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-emerald-600 text-white mt-2 block";
+                }
+            } else {
+                statusEl.innerHTML = `❌ FAILED: <span class="font-normal text-xs block mt-1">${failReason}</span>`;
+                statusEl.className = "text-center py-2.5 px-3 rounded-lg font-bold text-sm shadow-inner transition-all duration-300 bg-red-900/80 border border-red-700 text-red-200 mt-2 block";
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        window.onload = function() {
+            init();
+            animate();
+        };
+    </script>
+</body>
+</html>
